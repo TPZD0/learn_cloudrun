@@ -1,0 +1,51 @@
+substitutions:
+  _REGION: asia-southeast1
+  _FASTAPI_SERVICE: fastapi-service
+  _NEXTJS_SERVICE: nextjs-service
+
+steps:
+  # --- Build & Push FastAPI ---
+  - name: gcr.io/cloud-builders/docker
+    args: ["build", "-f", "fastapi/Dockerfile", "-t", "gcr.io/${PROJECT_ID}/${_FASTAPI_SERVICE}:${SHORT_SHA}", "fastapi"]
+
+  - name: gcr.io/cloud-builders/docker
+    args: ["push", "gcr.io/${PROJECT_ID}/${_FASTAPI_SERVICE}:${SHORT_SHA}"]
+
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: gcloud
+    args:
+      [
+        "run","deploy","${_FASTAPI_SERVICE}",
+        "--image","gcr.io/${PROJECT_ID}/${_FASTAPI_SERVICE}:${SHORT_SHA}",
+        "--region","${_REGION}",
+        "--platform","managed",
+        "--allow-unauthenticated",
+        "--port","8080"
+        # Optional env vars (uncomment and edit):
+        # ,"--set-env-vars","ENV=prod,LOG_LEVEL=info"
+      ]
+
+  # --- Build & Push Next.js ---
+  - name: gcr.io/cloud-builders/docker
+    args: ["build", "-f", "nextjs/Dockerfile", "-t", "gcr.io/${PROJECT_ID}/${_NEXTJS_SERVICE}:${SHORT_SHA}", "nextjs"]
+
+  - name: gcr.io/cloud-builders/docker
+    args: ["push", "gcr.io/${PROJECT_ID}/${_NEXTJS_SERVICE}:${SHORT_SHA}"]
+
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: gcloud
+    args:
+      [
+        "run","deploy","${_NEXTJS_SERVICE}",
+        "--image","gcr.io/${PROJECT_ID}/${_NEXTJS_SERVICE}:${SHORT_SHA}",
+        "--region","${_REGION}",
+        "--platform","managed",
+        "--allow-unauthenticated",
+        "--port","8080"
+        # If your Next.js needs env vars, add them here:
+        # ,"--set-env-vars","NEXT_PUBLIC_API_URL=https://YOUR_FASTAPI_URL"
+      ]
+
+images:
+  - "gcr.io/${PROJECT_ID}/${_FASTAPI_SERVICE}:${SHORT_SHA}"
+  - "gcr.io/${PROJECT_ID}/${_NEXTJS_SERVICE}:${SHORT_SHA}"
